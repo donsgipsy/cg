@@ -8,46 +8,53 @@ WIDTH = 1000
 HEIGHT = 650
 FPS = 60
 
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BROWN = (139, 69, 19)
-GRAY = (128, 128, 128)
-GREEN = (34, 139, 34)
-LIGHT_GREEN = (144, 238, 144)
-BLUE = (65, 105, 225)
-BEIGE = (245, 222, 179)
-DARK_BEIGE = (200, 180, 140)
-RED = (255, 0, 0)
 
-CLIENT_COLORS = [(255, 0, 0), (0, 200, 0), (0, 0, 255), (255, 165, 0)]
+
+WHITE = (255, 255, 255)
+BLACK = (50, 50, 50)
+BROWN = (160, 82, 45)         
+GRAY = (169, 169, 169)       
+GREEN = (107, 142, 35)     
+LIGHT_GREEN = (144, 238, 144) 
+BLUE = (70, 130, 180)        
+BEIGE = (250, 235, 215)  
+DARK_BEIGE = (245, 222, 179) 
+RED = (220, 20, 60)           
+
+CLIENT_COLORS = [
+    (220, 20, 60),    
+    (50, 205, 50),     
+    (65, 105, 225), 
+]
 
 PRODUCTS = [
-    {'name': 'Сэндвич', 'price': 70, 'stock': 3, 'cook_time': 3},
-    {'name': 'Сосиска в тесте', 'price': 90, 'stock': 4, 'cook_time': 0},
+    {'name': 'Сосиска в тесте', 'price': 70, 'stock': 3, 'cook_time': 7},
+    {'name': 'Булочка', 'price': 90, 'stock': 4, 'cook_time': 0},
     {'name': 'Сэндвич', 'price': 180, 'stock': 2, 'cook_time': 5},
     {'name': 'Кофе', 'price': 140, 'stock': 5, 'cook_time': 3}
 ]
-  
+
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Симулятор пекарни")
 clock = pygame.time.Clock()
 font = pygame.font.Font(None, 28)
 big_font = pygame.font.Font(None, 36)
 
+
 obstacles = [
-    pygame.Rect(300, 200, 400, 80),
-    pygame.Rect(750, 200, 100, 80)
+    pygame.Rect(300, 150, 400, 80),   
+    pygame.Rect(750, 150, 120, 80)  
 ]
 
-interaction_zone = pygame.Rect(300, 290, 400, 60)
-pickup_zone = pygame.Rect(700, 450, 150, 100)
+interaction_zone = pygame.Rect(300, 240, 400, 70)  
+pickup_zone = pygame.Rect(300, 450, 200, 100)     
 
 client = {
-    'x': 100, 'y': 325, 'radius': 20,
+    'x': 150, 'y': 300, 'radius': 20,              
     'color_index': 0, 'color': CLIENT_COLORS[0], 'speed': 200
 }
 
-money = 1000
+money = 420
 order_state = 'NO_ORDER'
 current_order = None
 order_timer = 0
@@ -71,42 +78,46 @@ def check_collision(x, y, radius, obstacles):
 def draw_scene(screen):
     screen.fill(BEIGE)
     
-    pygame.draw.rect(screen, BLUE, (20, 250, 80, 150))
+  
+    pygame.draw.rect(screen, BLUE, (30, 250, 100, 120))
     text = font.render("ВХОД", True, WHITE)
-    screen.blit(text, (35, 310))
+    screen.blit(text, (45, 300))
     
-    pygame.draw.rect(screen, BROWN, (300, 200, 400, 80))
+   
+    pygame.draw.rect(screen, BROWN, (300, 150, 400, 80))
     text = font.render("ПРИЛАВОК", True, WHITE)
-    screen.blit(text, (460, 230))
+    screen.blit(text, (440, 180))
     
-    pygame.draw.rect(screen, GRAY, (750, 200, 100, 80))
+
+    pygame.draw.rect(screen, GRAY, (750, 150, 120, 80))
     text = font.render("КАССА", True, BLACK)
-    screen.blit(text, (765, 230))
+    screen.blit(text, (770, 180))
     
+   
     zone_color = LIGHT_GREEN if order_state == 'READY' else GREEN
     pygame.draw.rect(screen, zone_color, pickup_zone)
     text = font.render("ВЫДАЧА", True, WHITE)
-    screen.blit(text, (740, 490))
+    screen.blit(text, (360, 490))
 
     zone_surface = pygame.Surface((interaction_zone.width, interaction_zone.height), pygame.SRCALPHA)
-    zone_surface.fill((255, 255, 0, 60))
+    zone_surface.fill((255, 215, 0, 80))  
     screen.blit(zone_surface, (interaction_zone.x, interaction_zone.y))
-    pygame.draw.rect(screen, (200, 200, 0), interaction_zone, 2)
-
+    pygame.draw.rect(screen, (184, 134, 11), interaction_zone, 2) 
     pygame.draw.circle(screen, client['color'], (int(client['x']), int(client['y'])), client['radius'])
 
+   
     if not menu_open:
         if interaction_zone.collidepoint(client['x'], client['y']) and order_state in ['NO_ORDER', 'DONE']:
             hint_text = big_font.render("E - сделать заказ", True, BLACK)
-            screen.blit(hint_text, (client['x'] - 100, client['y'] - 60))
+            screen.blit(hint_text, (client['x'] - 100, client['y'] - 70))
         
         if pickup_zone.collidepoint(client['x'], client['y']) and order_state == 'READY':
             hint_text = big_font.render("E - получить заказ", True, BLACK)
-            screen.blit(hint_text, (client['x'] - 110, client['y'] - 60))
+            screen.blit(hint_text, (client['x'] - 110, client['y'] - 70))
 
 def draw_progress_bar(screen):
     if order_state == 'WAITING' and current_order:
-        bar_x, bar_y = 300, 550
+        bar_x, bar_y = 300, 600
         bar_w, bar_h = 400, 30
         
         progress = max(0, order_timer / order_total_time)
@@ -144,14 +155,14 @@ def draw_menu(screen):
     overlay.fill((0, 0, 0, 150))
     screen.blit(overlay, (0, 0))
     
-    menu_rect = pygame.Rect(250, 100, 500, 450)
+    menu_rect = pygame.Rect(250, 150, 500, 350)
     pygame.draw.rect(screen, DARK_BEIGE, menu_rect)
     pygame.draw.rect(screen, BLACK, menu_rect, 3)
     
     title = big_font.render("МЕНЮ ЗАКАЗА", True, BLACK)
-    screen.blit(title, (370, 120))
+    screen.blit(title, (370, 170))
     
-    y = 180
+    y = 220
     for i, product in enumerate(PRODUCTS):
         stock_color = GREEN if product['stock'] > 0 else RED
         line = f"{i+1}. {product['name']} - {product['price']} ₽ (остаток: {product['stock']})"
@@ -160,7 +171,7 @@ def draw_menu(screen):
         y += 50
     
     close_text = font.render("ESC - закрыть меню", True, BLACK)
-    screen.blit(close_text, (370, 480))
+    screen.blit(close_text, (370, 430))
 
 def handle_events():
     global money, order_state, current_order, menu_open, message, message_timer, order_timer, order_total_time
