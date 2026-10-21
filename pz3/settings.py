@@ -18,7 +18,7 @@ BAR_EXCLUDED = (80, 80, 80)
 ARRAY_SIZE=30
 MIN_VALUE=30
 MAX_VALUE=100
-STEPS_PER_SECOND=15
+STEPS_PER_SECOND=5
 pygame.font.init()
 FONT_SMALL=pygame.font.Font(None, 24)
 FONT_MEDIUM=pygame.font.Font(None, 32)
