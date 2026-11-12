@@ -1,171 +1,91 @@
 import heapq
-import itertools
 from collections import deque
-def heuristic(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+class BaseSearch:
+    def __init__(self, grid):
+        self.grid = grid
+        self.start = grid.start
+        self.goal = grid.goal
 
-
-def reconstruct_path(came_from, start, goal):
-    current = goal
-    path = []
-    while current != start:
-        path.append(current)
-        current = came_from[current]
-    path.append(start)
-    path.reverse()
-    return path
-
-
-def path_cost(path, cost):
-    return sum(cost(node) for node in path[1:])
-
-
-def _found(came_from, start, goal, cost):
-    path = reconstruct_path(came_from, start, goal)
-    return {"type": "found", "path": path, "cost": path_cost(path, cost)}
-
-def bfs_steps(start, goal, neighbors, cost):
-    queue = deque([start])
-    visited = {start}
-    came_from = {}
-    g = {start: 0}
-
-    while queue:
-        current = queue.popleft()
-        opened = []
-
-        if current != goal:
-            for next_node in neighbors(current):
-                if next_node in visited:
-                    continue
-                visited.add(next_node)
-                came_from[next_node] = current
-                g[next_node] = g[current] + cost(next_node)
-                queue.append(next_node)
-                opened.append((next_node, g[next_node]))
-
-        yield {
-            "type": "visit",
-            "node": current,
-            "opened": opened,
-            "updated": [],
-            "frontier_size": len(queue),
-        }
-
-        if current == goal:
-            yield _found(came_from, start, goal, cost)
-            return
-
-    yield {"type": "not_found"}
-def dijkstra_steps(start, goal, neighbors, cost):
-    counter = itertools.count()                
-    frontier = [(0, next(counter), start)]
-    cost_so_far = {start: 0}
-    came_from = {}
-    open_nodes = {start}                      
-    closed = set()
-
-    while frontier:
-        current_cost, _, current = heapq.heappop(frontier)
-
-        if current in closed or current_cost > cost_so_far[current]:
-            continue
-
-        open_nodes.discard(current)
-        closed.add(current)
-        opened = []
-        updated = []
-
-        if current != goal:
-            for next_node in neighbors(current):
-                if next_node in closed:
-                    continue
-
-                new_cost = cost_so_far[current] + cost(next_node)
-
-                if next_node not in cost_so_far:
-                    opened.append((next_node, new_cost))
-                elif new_cost < cost_so_far[next_node]:
-                    updated.append((next_node, new_cost))
-                else:
-                    continue
-
-                cost_so_far[next_node] = new_cost
-                came_from[next_node] = current
-                open_nodes.add(next_node)
-                heapq.heappush(frontier, (new_cost, next(counter), next_node))
-
-        yield {
-            "type": "visit",
-            "node": current,
-            "opened": opened,
-            "updated": updated,
-            "frontier_size": len(open_nodes),
-        }
-
-        if current == goal:
-            yield _found(came_from, start, goal, cost)
-            return
-
-    yield {"type": "not_found"}
-
-
-def astar_steps(start, goal, neighbors, cost):
-    counter = itertools.count()
-    frontier = [(heuristic(start, goal), 0, next(counter), start)]   # (f, h, №, node)
-    cost_so_far = {start: 0}
-    came_from = {}
-    open_nodes = {start}
-    closed = set()
-
-    while frontier:
-        _, _, _, current = heapq.heappop(frontier)
-
-        if current in closed:                  
-            continue
-
-        open_nodes.discard(current)
-        closed.add(current)
-        opened = []
-        updated = []
-
-        if current != goal:
-            for next_node in neighbors(current):
-                if next_node in closed:
-                    continue
-
-                new_cost = cost_so_far[current] + cost(next_node)
-
-                if next_node not in cost_so_far:
-                    opened.append((next_node, new_cost))
-                elif new_cost < cost_so_far[next_node]:
-                    updated.append((next_node, new_cost))
-                else:
-                    continue
-
-                cost_so_far[next_node] = new_cost
-                came_from[next_node] = current
-                open_nodes.add(next_node)
-
-                h = heuristic(next_node, goal)
-                heapq.heappush(frontier, (new_cost + h, h, next(counter), next_node))
-
-        yield {
-            "type": "visit",
-            "node": current,
-            "opened": opened,
-            "updated": updated,
-            "frontier_size": len(open_nodes),
-        }
-
-        if current == goal:
-            yield _found(came_from, start, goal, cost)
-            return
-
-    yield {"type": "not_found"}
-
-ALGORITHMS = {
-    "BFS": bfs_steps,
-    "Dijkstra": dijkstra_steps,
-    "A*": astar_steps,
-}
+    def reconstruct_path(self, came_from):
+        path = []
+        curr = (self.goal.row, self.goal.col)
+        start_pos = (self.start.row, self.start.col)
+        while curr != start_pos:
+            path.append(curr)
+            curr = came_from.get(curr)
+            if curr is None:
+                yield {"type": "not_found"}
+                return
+        path.append(start_pos)
+        path.reverse()
+        for r, c in path:
+            cell = self.grid.get_cell(r, c)
+            if cell and cell.state not in ('START', 'GOAL'):
+                yield {"type": "path", "r": r, "c": c}
+class BFS(BaseSearch):
+    def steps(self):
+        queue = deque([self.start])
+        visited = {(self.start.row, self.start.col)}
+        came_from = {}
+        while queue:
+            current = queue.popleft()
+            yield {"type": "close", "r": current.row, "c": current.col}
+            if current.state == 'GOAL':
+                break
+            for neighbor in self.grid.get_neighbors(current):
+                n_pos = (neighbor.row, neighbor.col)
+                if n_pos not in visited:
+                    visited.add(n_pos)
+                    came_from[n_pos] = (current.row, current.col)
+                    yield {"type": "open", "r": neighbor.row, "c": neighbor.col}
+                    queue.append(neighbor)
+        yield from self.reconstruct_path(came_from)
+class Dijkstra(BaseSearch):
+    def steps(self):
+        frontier = [(0, self.start.row, self.start.col)]
+        cost_so_far = {(self.start.row, self.start.col): 0}
+        came_from = {}
+        while frontier:
+            current_cost, r, c = heapq.heappop(frontier)
+            if current_cost > cost_so_far.get((r, c), float('inf')):
+                continue
+            yield {"type": "close", "r": r, "c": c}
+            if self.grid.get_cell(r, c).state == 'GOAL':
+                break
+            for neighbor in self.grid.get_neighbors(self.grid.get_cell(r, c)):
+                new_cost = current_cost + neighbor.cost
+                n_pos = (neighbor.row, neighbor.col)
+                if n_pos not in cost_so_far or new_cost < cost_so_far[n_pos]:
+                    cost_so_far[n_pos] = new_cost
+                    came_from[n_pos] = (r, c)
+                    yield {"type": "open", "r": neighbor.row, "c": neighbor.col}
+                    heapq.heappush(frontier, (new_cost, neighbor.row, neighbor.col))
+        yield from self.reconstruct_path(came_from)
+class AStar(BaseSearch):
+    @staticmethod
+    def heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    def steps(self):
+        start_pos = (self.start.row, self.start.col)
+        goal_pos = (self.goal.row, self.goal.col)
+        h0 = self.heuristic(start_pos, goal_pos)
+        frontier = [(h0, 0, self.start.row, self.start.col)]
+        cost_so_far = {start_pos: 0}
+        came_from = {}
+        while frontier:
+            f_score, g_score, r, c = heapq.heappop(frontier)
+            if g_score > cost_so_far.get((r, c), float('inf')):
+                continue
+            yield {"type": "close", "r": r, "c": c}
+            if self.grid.get_cell(r, c).state == 'GOAL':
+                break
+            for neighbor in self.grid.get_neighbors(self.grid.get_cell(r, c)):
+                new_g = g_score + neighbor.cost
+                n_pos = (neighbor.row, neighbor.col)
+                if n_pos not in cost_so_far or new_g < cost_so_far[n_pos]:
+                    cost_so_far[n_pos] = new_g
+                    came_from[n_pos] = (r, c)
+                    h = self.heuristic(n_pos, goal_pos)
+                    yield {"type": "open", "r": neighbor.row, "c": neighbor.col}
+                    heapq.heappush(frontier, (new_g + h, new_g, neighbor.row, neighbor.col))
+        yield from self.reconstruct_path(came_from)
